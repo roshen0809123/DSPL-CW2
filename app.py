@@ -4,10 +4,8 @@ import plotly.express as px
 import re
 import base64
 
-# Page config
 st.set_page_config(page_title="Aid Effectiveness Dashboard", layout="wide", initial_sidebar_state="expanded")
 
-# ==== Background Image ====
 def set_background(image_file):
     with open(image_file, "rb") as img:
         encoded = base64.b64encode(img.read()).decode()
@@ -30,21 +28,18 @@ def set_background(image_file):
         unsafe_allow_html=True
     )
 
-# Call background setup (change image name as needed)
 set_background("money.jpg")
 
-# ==== Load dataset ====
 @st.cache_data
 def load_data():
     return pd.read_csv("aid effectiveness (1).csv")
 
 data = load_data()
 
-# ==== Navigation ====
 st.sidebar.title("Navigation")
 page = st.sidebar.radio("Go to", ["Overview", "Aid Effectiveness"])
 
-# ==== OVERVIEW PAGE ====
+# overview page
 if page == "Overview":
     st.title("Sri Lanka Aid Effectiveness Dashboard")
 
@@ -54,7 +49,7 @@ if page == "Overview":
     Aid effectiveness is the impact that aid has in reducing poverty and inequality, increasing growth, building capacity, and accelerating achievement of the Millennium Development Goals set by the international community. Indicators here cover aid received as well as progress in reducing poverty and improving education, health, and other measures of human welfare.
     """)
 
-    st.subheader("Full Dataset")
+    st.subheader("Dataset")
     st.dataframe(data)
 
     st.subheader("Column Information")
@@ -70,7 +65,7 @@ if page == "Overview":
     st.write(f"**Time Range**: {int(data['Year'].min())} - {int(data['Year'].max())}")
     st.write(f"**Unique Indicators**: {data['Indicator Name'].nunique()}")
 
-# ==== AID EFFECTIVENESS CHARTS PAGE ====
+# aid effectiveness page
 elif page == "Aid Effectiveness":
     st.title("Aid Effectivenesss")
 
@@ -82,14 +77,13 @@ elif page == "Aid Effectiveness":
     min_year, max_year = int(years.min()), int(years.max())
     year_range = st.sidebar.slider("Select Year Range for Bar and Line Chart", min_year, max_year, (min_year, max_year))
 
-    # ==== Filter data for line & bar charts ====
     filtered_data = data[
         (data["Indicator Name"] == selected_indicator) &
         (data["Year"] >= year_range[0]) &
         (data["Year"] <= year_range[1])
     ]
 
-    # ==== LINE CHART ====
+    # line chart
     st.markdown("## Line Chart")
     fig_line = px.line(
         filtered_data, x="Year", y="Value",
@@ -99,7 +93,7 @@ elif page == "Aid Effectiveness":
     fig_line.update_layout(title_x=0.5, font=dict(size=16), xaxis_title="Year", yaxis_title="Value")
     st.plotly_chart(fig_line, use_container_width=True)
 
-    # ==== BAR CHART ====
+    # bar chart
     st.markdown("## Bar Chart")
     fig_col = px.bar(
         filtered_data.sort_values("Year"),
@@ -111,7 +105,7 @@ elif page == "Aid Effectiveness":
     fig_col.update_traces(texttemplate='%{y:.2s}', textposition='outside')
     st.plotly_chart(fig_col, use_container_width=True)
 
-    # ==== PIE CHART ====
+    # pie chart
     st.markdown("## Pie Chart: Net Bilateral Aid Flows from DAC Donors (by Year)")
 
     dac_data = data[data["Indicator Name"].str.contains("Net bilateral aid flows from DAC donors", case=False, na=False)]
@@ -159,7 +153,7 @@ elif page == "Aid Effectiveness":
     fig_pie.update_layout(title_x=0.5, font=dict(size=16), legend_title="Country", showlegend=True)
     st.plotly_chart(fig_pie, use_container_width=True)
 
-    # ==== AREA CHART ====
+    # area chart
     st.markdown("## Area Chart")
 
     multi_indicators = st.sidebar.multiselect(
