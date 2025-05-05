@@ -90,7 +90,7 @@ elif page == "Aid Effectiveness":
         title=f"{selected_indicator} Over Time",
         markers=True, template="plotly_dark"
     )
-    fig_line.update_layout(title_x=0.5, font=dict(size=16), xaxis_title="Year", yaxis_title="Value")
+    fig_line.update_layout(title_x=0.2, font=dict(size=16), xaxis_title="Year", yaxis_title="Value")
     st.plotly_chart(fig_line, use_container_width=True)
 
     # bar chart
@@ -101,7 +101,7 @@ elif page == "Aid Effectiveness":
         title=f"{selected_indicator} - Column Chart",
         template="plotly_dark", height=600
     )
-    fig_col.update_layout(title_x=0.5, font=dict(size=16), xaxis_title="Year", yaxis_title="Value (USD or Units)")
+    fig_col.update_layout(title_x=0.2, font=dict(size=16), xaxis_title="Year", yaxis_title="Value (USD or Units)")
     fig_col.update_traces(texttemplate='%{y:.2s}', textposition='outside')
     st.plotly_chart(fig_col, use_container_width=True)
 
@@ -150,7 +150,7 @@ elif page == "Aid Effectiveness":
         template="plotly_dark", height=700
     )
     fig_pie.update_traces(textinfo='label+percent', textfont_size=16, marker=dict(line=dict(color='#000000', width=1)))
-    fig_pie.update_layout(title_x=0.5, font=dict(size=16), legend_title="Country", showlegend=True)
+    fig_pie.update_layout(title_x=0.2, font=dict(size=16), legend_title="Country", showlegend=True)
     st.plotly_chart(fig_pie, use_container_width=True)
 
     # area chart
@@ -175,7 +175,7 @@ elif page == "Aid Effectiveness":
             title="Stacked Area Chart of Selected Indicators",
             template="plotly_dark", height=600
         )
-        fig_area.update_layout(title_x=0.5, font=dict(size=16), xaxis_title="Year", yaxis_title="Value")
+        fig_area.update_layout(title_x=0.2, font=dict(size=16), xaxis_title="Year", yaxis_title="Value")
         st.plotly_chart(fig_area, use_container_width=True)
     else:
         st.info("Please select at least one indicator for the area chart.")
