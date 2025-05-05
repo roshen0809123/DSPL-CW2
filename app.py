@@ -67,7 +67,7 @@ if page == "Overview":
 
 # aid effectiveness page
 elif page == "Aid Effectiveness":
-    st.title("Aid Effectivenesss")
+    st.title("Aid Effectiveness")
 
     st.sidebar.header("Filter Options")
     indicators = sorted(data["Indicator Name"].dropna().unique())
