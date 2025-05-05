@@ -1,56 +1,189 @@
 import streamlit as st
 import pandas as pd
 import plotly.express as px
+import re
+import base64
 
-# Load dataset
-df = pd.read_csv("aid effectiveness (1).csv")
+# Page config
+st.set_page_config(page_title="Aid Effectiveness Dashboard", layout="wide", initial_sidebar_state="expanded")
 
-# Display raw data
-st.subheader("Raw Dataset Preview")
-st.dataframe(df)
+# ==== Background Image ====
+def set_background(image_file):
+    with open(image_file, "rb") as img:
+        encoded = base64.b64encode(img.read()).decode()
+    st.markdown(
+        f"""
+        <style>
+        .stApp {{
+            background-image: url("data:image/jpeg;base64,{encoded}");
+            background-size: cover;
+            background-position: center;
+            background-attachment: fixed;
+        }}
+        .block-container {{
+            background-color: rgba(0, 0, 0, 0.65);
+            padding: 2rem;
+            border-radius: 10px;
+        }}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
 
-# Clean column names
-df.columns = [col.strip().replace(" ", "_") for col in df.columns]
+# Call background setup (change image name as needed)
+set_background("money.jpg")
 
-# Identify the time column (assumed to be "Year")
-year_col = "Year" if "Year" in df.columns else df.columns[0]
-df[year_col] = pd.to_numeric(df[year_col], errors='coerce')
-df = df.dropna(subset=[year_col])
-df[year_col] = df[year_col].astype(int)
+# ==== Load dataset ====
+@st.cache_data
+def load_data():
+    return pd.read_csv("aid effectiveness (1).csv")
 
-# Select numeric columns for indicators
-num_cols = df.select_dtypes(include='number').columns.tolist()
-if year_col in num_cols:
-    num_cols.remove(year_col)
+data = load_data()
 
-# Sidebar filters
-st.sidebar.header("Filters")
+# ==== Navigation ====
+st.sidebar.title("Navigation")
+page = st.sidebar.radio("Go to", ["Overview", "Aid Effectiveness"])
 
-# Year range filter
-min_year = int(df[year_col].min())
-max_year = int(df[year_col].max())
-year_range = st.sidebar.slider("Select Year Range", min_value=min_year, max_value=max_year,
-                               value=(min_year, max_year))
+# ==== OVERVIEW PAGE ====
+if page == "Overview":
+    st.title("Sri Lanka Aid Effectiveness Dashboard")
 
-# Single indicator selection
-selected_indicator = st.sidebar.selectbox("Select One Indicator to Display", options=num_cols)
+    st.markdown("""
+    Welcome to the **Aid Effectiveness Dashboard!**
 
-# Apply filters
-filtered_df = df[(df[year_col] >= year_range[0]) & (df[year_col] <= year_range[1])]
-plot_df = filtered_df[[year_col, selected_indicator]].groupby(year_col).sum().reset_index()
+    Aid effectiveness is the impact that aid has in reducing poverty and inequality, increasing growth, building capacity, and accelerating achievement of the Millennium Development Goals set by the international community. Indicators here cover aid received as well as progress in reducing poverty and improving education, health, and other measures of human welfare.
+    """)
 
-# Line Chart
-st.subheader(f"📈 Line Chart - {selected_indicator} Over Time")
-fig_line = px.line(plot_df, x=year_col, y=selected_indicator,
-                   title=f"{selected_indicator} Over Time",
-                   labels={year_col: "Year", selected_indicator: selected_indicator})
-st.plotly_chart(fig_line, use_container_width=True)
+    st.subheader("Full Dataset")
+    st.dataframe(data)
 
-# Bar Chart
-st.subheader(f"📊 Bar Chart - {selected_indicator} by Year")
-fig_bar = px.bar(plot_df, x=year_col, y=selected_indicator,
-                 title=f"{selected_indicator} by Year",
-                 labels={year_col: "Year", selected_indicator: selected_indicator})
-st.plotly_chart(fig_bar, use_container_width=True)
+    st.subheader("Column Information")
+    st.markdown("""
+    - **Year**: The year in which the data was recorded  
+    - **Indicator Name**: The descriptive name of the aid-related metric  
+    - **Indicator Code**: A short code representing each indicator  
+    - **Value**: The aid amount or value for the given indicator and year
+    """)
+
+    st.subheader("Dataset Summary")
+    st.write(f"**Total Rows**: {len(data):,}")
+    st.write(f"**Time Range**: {int(data['Year'].min())} - {int(data['Year'].max())}")
+    st.write(f"**Unique Indicators**: {data['Indicator Name'].nunique()}")
+
+# ==== AID EFFECTIVENESS CHARTS PAGE ====
+elif page == "Aid Effectiveness":
+    st.title("Aid Effectivenesss")
+
+    st.sidebar.header("Filter Options")
+    indicators = sorted(data["Indicator Name"].dropna().unique())
+    selected_indicator = st.sidebar.selectbox("Select Indicators for Bar and Line Chart", indicators)
+
+    years = data["Year"].dropna().unique()
+    min_year, max_year = int(years.min()), int(years.max())
+    year_range = st.sidebar.slider("Select Year Range for Bar and Line Chart", min_year, max_year, (min_year, max_year))
+
+    # ==== Filter data for line & bar charts ====
+    filtered_data = data[
+        (data["Indicator Name"] == selected_indicator) &
+        (data["Year"] >= year_range[0]) &
+        (data["Year"] <= year_range[1])
+    ]
+
+    # ==== LINE CHART ====
+    st.markdown("## Line Chart")
+    fig_line = px.line(
+        filtered_data, x="Year", y="Value",
+        title=f"{selected_indicator} Over Time",
+        markers=True, template="plotly_dark"
+    )
+    fig_line.update_layout(title_x=0.5, font=dict(size=16), xaxis_title="Year", yaxis_title="Value")
+    st.plotly_chart(fig_line, use_container_width=True)
+
+    # ==== BAR CHART ====
+    st.markdown("## Bar Chart")
+    fig_col = px.bar(
+        filtered_data.sort_values("Year"),
+        x="Year", y="Value",
+        title=f"{selected_indicator} - Column Chart",
+        template="plotly_dark", height=600
+    )
+    fig_col.update_layout(title_x=0.5, font=dict(size=16), xaxis_title="Year", yaxis_title="Value (USD or Units)")
+    fig_col.update_traces(texttemplate='%{y:.2s}', textposition='outside')
+    st.plotly_chart(fig_col, use_container_width=True)
+
+    # ==== PIE CHART ====
+    st.markdown("## Pie Chart: Net Bilateral Aid Flows from DAC Donors (by Year)")
+
+    dac_data = data[data["Indicator Name"].str.contains("Net bilateral aid flows from DAC donors", case=False, na=False)]
+    pie_years = sorted(dac_data["Year"].dropna().unique())
+    selected_pie_year = st.sidebar.selectbox("Select Year for Pie Chart", pie_years, index=len(pie_years) - 1)
+
+    def extract_country(name):
+        match = re.search(r'DAC donors,\s*(.*?)\s*\(', name)
+        return match.group(1).strip() if match else "Unknown"
+
+    dac_data["Donor Country"] = dac_data["Indicator Name"].apply(extract_country)
+
+    valid_countries = [
+        "Australia", "Austria", "Belgium", "Canada", "European Union institutions", "Switzerland",
+        "Czechia", "Germany", "Denmark", "Spain", "Finland", "France", "United Kingdom",
+        "Greece", "Hungary", "Ireland", "Iceland", "Italy", "Japan", "Korea, Rep.",
+        "Luxembourg", "Netherlands", "Norway", "New Zealand", "Poland", "Portugal",
+        "Slovenia", "Sweden", "United States"
+    ]
+
+    filtered_dac = dac_data[
+        (dac_data["Donor Country"].isin(valid_countries)) &
+        (dac_data["Year"] == selected_pie_year)
+    ]
+
+    grouped = filtered_dac.groupby("Donor Country")["Value"].sum().reset_index()
+    grouped["Share"] = grouped["Value"] / grouped["Value"].sum() * 100
+
+    top_donors = grouped[grouped["Share"] >= 1]
+    others = grouped[grouped["Share"] < 1]
+    others_sum = others["Value"].sum()
+
+    if not others.empty:
+        others_row = pd.DataFrame([{"Donor Country": "Others (<1%)", "Value": others_sum}])
+        pie_data = pd.concat([top_donors[["Donor Country", "Value"]], others_row], ignore_index=True)
+    else:
+        pie_data = grouped[["Donor Country", "Value"]]
+
+    fig_pie = px.pie(
+        pie_data, names="Donor Country", values="Value",
+        title=f"DAC Donor Aid by Country – {selected_pie_year} (Grouped <1%)",
+        template="plotly_dark", height=700
+    )
+    fig_pie.update_traces(textinfo='label+percent', textfont_size=16, marker=dict(line=dict(color='#000000', width=1)))
+    fig_pie.update_layout(title_x=0.5, font=dict(size=16), legend_title="Country", showlegend=True)
+    st.plotly_chart(fig_pie, use_container_width=True)
+
+    # ==== AREA CHART ====
+    st.markdown("## Area Chart")
+
+    multi_indicators = st.sidebar.multiselect(
+        "Select Indicators for Area Chart", options=indicators, default=indicators[:2]
+    )
+
+    area_data = data[
+        (data["Indicator Name"].isin(multi_indicators)) &
+        (data["Year"] >= year_range[0]) & (data["Year"] <= year_range[1])
+    ]
+
+    if not area_data.empty and multi_indicators:
+        pivot_df = area_data.pivot_table(
+            index="Year", columns="Indicator Name", values="Value", aggfunc="sum"
+        ).fillna(0).reset_index().sort_values("Year")
+
+        fig_area = px.area(
+            pivot_df, x="Year", y=multi_indicators,
+            title="Stacked Area Chart of Selected Indicators",
+            template="plotly_dark", height=600
+        )
+        fig_area.update_layout(title_x=0.5, font=dict(size=16), xaxis_title="Year", yaxis_title="Value")
+        st.plotly_chart(fig_area, use_container_width=True)
+    else:
+        st.info("Please select at least one indicator for the area chart.")
 
 
