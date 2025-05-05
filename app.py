@@ -54,10 +54,10 @@ if page == "Overview":
 
     st.subheader("Column Information")
     st.markdown("""
-    - **Year**: The year in which the data was recorded  
-    - **Indicator Name**: The descriptive name of the aid-related metric  
-    - **Indicator Code**: A short code representing each indicator  
-    - **Value**: The aid amount or value for the given indicator and year
+    - **Year**: The year the data was recorded.  
+    - **Indicator Name**: The descriptive name of the indicator.  
+    - **Indicator Code**: A short code representing each indicator. 
+    - **Value**: The numeric value of the indicator for the given year.
     """)
 
     st.subheader("Dataset Summary")
